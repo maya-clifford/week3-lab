@@ -5,7 +5,7 @@
 # it could answer is how to predict what colleges are in the 
 # highest percentile for students who graduate in the typical 
 # amount of time. 
-
+# 
 # For the campus recruitment dataset, it can answer the 
 # question of if performance in school relates to your salary 
 # after graduation by trying to predict salary based on the
@@ -23,6 +23,16 @@ from sklearn.model_selection import train_test_split  # For splitting data
 from sklearn.preprocessing import MinMaxScaler, StandardScaler  # For scaling
 from io import StringIO  # For reading string data as file
 import requests  # For HTTP requests to download data
+
+# %% [markdown]
+# ### College Completion Dataset 
+# A generic question that this dataset could address is predicting 
+# if a college is in a high percentile for the proportion of students
+# who graduate in four years and what factors play into that. 
+# 
+# An independent business metric for this problem is if colleges are 
+# able to increase how many students graduate on time by changing the 
+# factors that are most infulential in the model. 
 
 
 # %% 
@@ -66,6 +76,7 @@ completion.info()
 # Make a list with these two columns and convert them to categorical variables
 categorical = ['level', 'control']
 completion[categorical] = completion[categorical].astype('category')
+completion.dtypes
 
 # index, unitid, chronname, site, and similar are all unique identifiers so we can drop 
 # them. 
@@ -89,4 +100,39 @@ numeric_cols = list(completion_cleaned.select_dtypes('number'))
 completion_cleaned[numeric_cols] = MinMaxScaler().fit_transform(completion_cleaned[numeric_cols])
 # view the data to ensure it was done right 
 completion_cleaned.head()
+
+# %% [markdown]
+# ### One-hot encoding factor variables 
+
+# %% 
+# The two categorical variables we have are level and control. 
+# We want to perform one-hot encoding on them to turn them into 
+# numeric data. 
+
+# To do this, first select all columns that are the category datatype
+category_list = list(completion_cleaned.select_dtypes('category'))
+
+# Use get_dummies method in Pandas to perform one-hot encoding 
+completion_encoded = pd.get_dummies(completion_cleaned, columns=category_list)
+
+# Check the info of the new dataframe to ensure it worked correctly 
+completion_encoded.info()
+
+# %% [markdown]
+# ### Calculate the prevalence of our target variable 
+
+# In this case, our target variable is numeric as it's a percentile, but 
+# we can split it into colleges that are in the top quartile and those that 
+# aren't. 
+
+# %% 
+# First visualize the distribution of the grad_100_percentile column 
+print(completion_encoded.boxplot(column='grad_100_percentile', vert=False, grid=False))
+      
+# Also look at the summary statistics of the column to obtain what 
+# number is the 75th percentile 
+print(completion_encoded.grad_100_percentile.describe())
+# The upper quartile is at 0.73, so we'll want to split the column there
+
 # %%
+# We can see 
