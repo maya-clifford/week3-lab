@@ -135,4 +135,65 @@ print(completion_encoded.grad_100_percentile.describe())
 # The upper quartile is at 0.73, so we'll want to split the column there
 
 # %%
-# We can see 
+# We can see from the boxplot and summary statistics that the data has a 
+# min of 0, a max of 1, and an upper quartile of 0.73 
+
+# Now we want to make a binary target variable, grad_100_percentile_f
+# A value of 1 in this column indicates a signfigantly above average 
+# college when it comes to on time graduation rate, and a 0 means everything 
+# else. 
+completion_encoded['grad_100_percentile_f'] = pd.cut(completion_encoded.grad_100_percentile, 
+                                                    bins=[0, 0.73, 1],
+                                                    labels=[0,1])
+
+# verify the new column 
+completion_encoded.info()
+ 
+# %% 
+# calculate the prevalence 
+prevalence = (completion_encoded.grad_100_percentile_f.value_counts()[1] / len(completion_encoded.grad_100_percentile_f))
+
+print(f'Prevalence: {prevalence:.2%}')
+
+# %% [markdown]
+# ### Partitioning the dataset into train, tune, and test 
+
+# We can drop the grad_100_percentile, grad_100_value, grad_150_percentile, and grad_150_value
+# columns because grad_100_percentile is our target variable and the other 3 are directly tied 
+# to that, meaning that it wouldn't be useful information for a college to have to increase their 
+# percentile nationally of students who graduate on time. 
+
+# make a list of the columns we want to drop 
+cols = ['grad_100_value', 'grad_100_percentile', 'grad_150_value', 'grad_150_percentile']
+
+# Drop these columns 
+completion_clean = completion_encoded.drop(cols, axis=1)
+
+# Also want to drop any rows with NaN in grad_100_percentile_f 
+completion_clean = completion_clean.dropna(subset=['grad_100_percentile_f'])
+completion_clean.head()
+
+# %%
+# We want to split our dataset into a train (about 70% of the data), tune (about 15% of the data), 
+# and test (about 15% of the data) set. 
+# 70% of 3228 (the number of rows in the dataset) is 2,269.6. 
+# Because we can't get .6 of a row and we want the tune and test sets be the same size, we'll make 
+# the train set be 2,260 entries so that the tune and test sets have 484 entries each. 
+
+# First split the training data from the rest, stratifying by the grad_100_percentile_f column so the
+# proportions are preserved  
+train, test = train_test_split(completion_clean, 
+                               train_size = 2260, 
+                               stratify=completion_clean.grad_100_percentile_f
+                               )
+
+# %%
+# verify the split sizes 
+print(f"Training set shape: {train.shape}")
+print(f"Test set shape: {test.shape}")
+
+# %%
+# then split the test set into tune and test 
+tune, test = train_test_split(test, train_size=.5, stratify=test.grad_100_percentile_f)
+
+# %%
