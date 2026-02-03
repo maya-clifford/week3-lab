@@ -158,10 +158,11 @@ print(f'Prevalence: {prevalence:.2%}')
 # %% [markdown]
 # ### Partitioning the dataset into train, tune, and test 
 
+# %%
 # We can drop the grad_100_percentile, grad_100_value, grad_150_percentile, and grad_150_value
 # columns because grad_100_percentile is our target variable and the other 3 are directly tied 
 # to that, meaning that it wouldn't be useful information for a college to have to increase their 
-# percentile nationally of students who graduate on time. 
+# percentile nationally of students who graduate on time. We can also drop 
 
 # make a list of the columns we want to drop 
 cols = ['grad_100_value', 'grad_100_percentile', 'grad_150_value', 'grad_150_percentile']
@@ -195,5 +196,168 @@ print(f"Test set shape: {test.shape}")
 # %%
 # then split the test set into tune and test 
 tune, test = train_test_split(test, train_size=.5, stratify=test.grad_100_percentile_f)
+
+# %%
+# verify the prevalence of the train, tune, and test sets
+prevalence_train = (train.grad_100_percentile_f.value_counts()[1] / len(train.grad_100_percentile_f))
+prevalence_tune = (tune.grad_100_percentile_f.value_counts()[1] / len(tune.grad_100_percentile_f))
+prevalence_test = (test.grad_100_percentile_f.value_counts()[1] / len(test.grad_100_percentile_f))
+print(f'Prevalence Training set: {prevalence_train:.2f}')
+print(f'Prevalence Tuning set: {prevalence_tune:.2f}')
+print(f'Prevalence Testing set: {prevalence_test:.2f}')
+
+# %% [markdown]
+# ### Job Placement Dataset
+# A generic question that this dataset could address is predicting 
+# salary for students and seeing which features are most indicative 
+# salary so that students know what to focus on. 
+# 
+# An independent business metric for this problem would be if a school's
+# average student salary after graduation increased after using this data. 
+
+
+# %% 
+# Job Placement Dataset 
+# Read in the data 
+url = ("https://raw.githubusercontent.com/DG1606/CMS-R-2020/master/Placement_Data_Full_Class.csv")
+job = pd.read_csv(url)
+
+# Check for null values and data types 
+job.info()
+
+
+# %%
+# Change rows that have a null value for salary to 0 because salary is only 
+# missing if the student wasn't placed in a job.
+
+# Use fillna to make all null values in the salary column 0. 
+job['salary'] = job['salary'].fillna(0)
+# verify that this worked 
+job.info()
+
+
+# %%
+# By investigating the data using Data Wrangler, we can see that all string 
+# columns only have 2 or 3 unique values, meaning they can be converted to 
+# categorical with no other changes needed to the data
+
+# Make a list of all string columns and convert them to categorical variables
+category = list(job.select_dtypes('str'))
+job[category] = job[category].astype('category')
+# check the new data types 
+job.dtypes
+
+# %%
+# sl_no is a unique identifier so we can drop it. 
+identifier = ['sl_no']
+job = job.drop(columns=identifier)
+
+# %% [markdown]
+# ### Scaling the data using min max scaler 
+
+# %% 
+# make a list of all of the columns that are float or integer 
+numeric_cols = list(job.select_dtypes('number'))
+# convert those columns into the min max scale using MinMaxScaler()
+job[numeric_cols] = MinMaxScaler().fit_transform(job[numeric_cols])
+# view the data to ensure it was done right 
+job.head()
+
+# %% [markdown]
+# ### One-hot encoding factor variables 
+
+# %% 
+# The two categorical variables we have are level and control. 
+# We want to perform one-hot encoding on them to turn them into 
+# numeric data. 
+
+# To do this, first select all columns that are the category datatype
+category_list = list(job.select_dtypes('category'))
+
+# Use get_dummies method in Pandas to perform one-hot encoding 
+job_encoded = pd.get_dummies(job, columns=category_list)
+
+# Check the info of the new dataframe to ensure it worked correctly 
+job_encoded.info()
+
+# %% [markdown]
+# ### Calculate the prevalence of our target variable 
+
+# In this case, our target variable is numeric as it's a salary, but 
+# we can split it into high and low salaries 
+
+# %% 
+# First visualize the distribution of the salary column 
+print(job_encoded.boxplot(column='salary', vert=False, grid=False))
+      
+# Also look at the summary statistics of the column to obtain what 
+# number is the 75th percentile 
+print(job_encoded.salary.describe())
+# The upper quartile is at 0.135, so we'll want to split the column there
+
+# %%
+# We can see from the boxplot and summary statistics that the data has a 
+# min of 0, a max of 1, and an upper quartile of 0.3 
+
+# Now we want to make a binary target variable, salary_f
+# A value of 1 in this column indicates a signfigantly above average 
+# salary after graduation, and a 0 means everything else. 
+job_encoded['salary_f'] = pd.cut(job_encoded.salary, 
+                                                    bins=[-0.01, 0.300532, 1.01],
+                                                    labels=[0,1])
+
+# verify the new column 
+job_encoded.info()
+ 
+# %% 
+# calculate the prevalence 
+prevalence = (job_encoded.salary_f.value_counts()[1] / len(job_encoded.salary_f))
+
+print(f'Prevalence: {prevalence:.2%}')
+
+# %% [markdown]
+# ### Partitioning the dataset into train, tune, and test 
+
+# %% 
+# also drop salary column since this is our target variable 
+target = ['salary']
+job_clean = job_encoded.drop(columns=target)
+
+# %%
+# We want to split our dataset into a train (about 70% of the data), tune (about 15% of the data), 
+# and test (about 15% of the data) set. 
+# 70% of 215 (the number of rows in the dataset) is 150.5. 
+# Because we can't get .5 of a row and we want the tune and test sets be the same size, we'll make 
+# the train set be 151 entries so that the tune and test sets have 32 entries each. 
+
+# First split the training data from the rest, stratifying by the salary_f column so the
+# proportions are preserved  
+train, test = train_test_split(job_clean, 
+                               train_size = 151, 
+                               stratify=job_clean.salary_f
+                               )
+
+# %%
+# verify the split sizes 
+print(f"Training set shape: {train.shape}")
+print(f"Test set shape: {test.shape}")
+
+# %%
+# then split the test set into tune and test 
+tune, test = train_test_split(test, train_size=.5, stratify=test.salary_f)
+
+# %%
+# verify the prevalence of the train, tune, and test sets
+prevalence_train = (train.salary_f.value_counts()[1] / len(train.salary_f))
+prevalence_tune = (tune.salary_f.value_counts()[1] / len(tune.salary_f))
+prevalence_test = (test.salary_f.value_counts()[1] / len(test.salary_f))
+print(f'Prevalence Training set: {prevalence_train:.2f}')
+print(f'Prevalence Tuning set: {prevalence_tune:.2f}')
+print(f'Prevalence Testing set: {prevalence_test:.2f}')
+# %% [markdown]
+# ## Part 3 
+# 
+# For the college completion data set, my instincts tell me that it should do 
+# decently well answering my question. There's a lot of data 
 
 # %%
