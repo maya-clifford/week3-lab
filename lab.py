@@ -26,10 +26,7 @@ import requests  # For HTTP requests to download data
 
 # %% [markdown]
 # ### College Completion Dataset 
-# A generic question that this dataset could address is predicting 
-# if a college is in a high percentile for the proportion of students
-# who graduate in four years and what factors play into that. 
-# 
+#
 # An independent business metric for this problem is if colleges are 
 # able to increase how many students graduate on time by changing the 
 # factors that are most infulential in the model. 
@@ -162,7 +159,7 @@ print(f'Prevalence: {prevalence:.2%}')
 # We can drop the grad_100_percentile, grad_100_value, grad_150_percentile, and grad_150_value
 # columns because grad_100_percentile is our target variable and the other 3 are directly tied 
 # to that, meaning that it wouldn't be useful information for a college to have to increase their 
-# percentile nationally of students who graduate on time. We can also drop 
+# percentile nationally of students who graduate on time. 
 
 # make a list of the columns we want to drop 
 cols = ['grad_100_value', 'grad_100_percentile', 'grad_150_value', 'grad_150_percentile']
@@ -208,9 +205,6 @@ print(f'Prevalence Testing set: {prevalence_test:.2f}')
 
 # %% [markdown]
 # ### Job Placement Dataset
-# A generic question that this dataset could address is predicting 
-# salary for students and seeing which features are most indicative 
-# salary so that students know what to focus on. 
 # 
 # An independent business metric for this problem would be if a school's
 # average student salary after graduation increased after using this data. 
@@ -248,9 +242,13 @@ job[category] = job[category].astype('category')
 job.dtypes
 
 # %%
-# sl_no is a unique identifier so we can drop it. 
-identifier = ['sl_no']
-job = job.drop(columns=identifier)
+# sl_no is a unique identifier so we can drop it. We can also drop the status 
+# column because it's now encoded in the salary column, since a salary of 0 
+# indicates that a student wasn't placed. 
+
+# make a list of columns to drop
+to_drop = ['sl_no', 'status']
+job = job.drop(columns=to_drop)
 
 # %% [markdown]
 # ### Scaling the data using min max scaler 
@@ -291,7 +289,7 @@ job_encoded.info()
 print(job_encoded.boxplot(column='salary', vert=False, grid=False))
       
 # Also look at the summary statistics of the column to obtain what 
-# number is the 75th percentile 
+# number is the upper quartile
 print(job_encoded.salary.describe())
 # The upper quartile is at 0.135, so we'll want to split the column there
 
@@ -354,10 +352,40 @@ prevalence_test = (test.salary_f.value_counts()[1] / len(test.salary_f))
 print(f'Prevalence Training set: {prevalence_train:.2f}')
 print(f'Prevalence Tuning set: {prevalence_tune:.2f}')
 print(f'Prevalence Testing set: {prevalence_test:.2f}')
+
 # %% [markdown]
 # ## Part 3 
 # 
 # For the college completion data set, my instincts tell me that it should do 
-# decently well answering my question. There's a lot of data 
-
-# %%
+# decently well answering my question. There's a lot of data points and features 
+# that could be useful, so I think that there should be enough data for the model 
+# to work with. One thing I'm not sure how to deal with in the model is that many 
+# of the features have a column for both the value and the percentile for a given 
+# thing (such as endowment value and percentile). I think that this could impact 
+# the model because it means that those features are essentially being counted 
+# twice, which could be problematic. I'm not sure, however, which would be better 
+# to keep because the percentile shows how the college's performance in that category
+# compares to colleges that might not be in the dataset, but the value may be more 
+# informative with differences in say the endowment between colleges. I think that 
+# the included features should allow it to answer my question pretty well because they 
+# cover a lot of the data outside of academics that relate to colleges. The model 
+# being able to predict if a college will have a high normal-time graduation rate 
+# could give colleges an idea of what they can change and how that would impact the 
+# amount of students that graduate on time. There are also fixed factors that a college
+# can't change, like if it's a HBCU or if it's a 2-year or 4-year college, but these are 
+# still important to include in the model because they impact the graduation rates. 
+#
+# I think that the job dataset might do not as well answering my question. It only has 
+# a little over 200 data points, which means that any anomalies in the data will be 
+# more impactful on the model. Also, another potential issue is that a few of the 
+# columns have to do with the percentages of how the student scored at various points 
+# in their schooling. This could lead to some variablility in the scores depending on 
+# how the tests are administered and graded. If the students came from different schools
+# and had different graders, there's a chance that some tests were graded differently 
+# from others, which would change the percentage that the student scored. It does seem 
+# like the data included would be very indicative of how a student's salary was affected
+# by their performance in school, but it also doesn't include other factors that could 
+# impact their salary, like if they had connections in the company that they ended up
+# working for. Overall, I think that the data can help make a model to predict salary, but
+# it'll be important to remember that there are outside factors that could also impact 
+# salary after graduation. 
